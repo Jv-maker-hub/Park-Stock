@@ -64,7 +64,7 @@ export default function Header({ onMenuClick }) {
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-50">
+            <div className="fixed right-4 top-14 w-52 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-[9999]">
               <div className="px-4 py-3 border-b border-slate-100">
                 <p className="text-sm font-medium text-slate-800">{profile?.nombre}</p>
                 <p className="text-xs text-slate-500 truncate">{profile?.email}</p>
