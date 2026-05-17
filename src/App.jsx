@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { Warehouse, Clock } from 'lucide-react'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -11,6 +12,7 @@ import Importar from './pages/Importar'
 import Analisis from './pages/Analisis'
 import Mapa from './pages/Mapa'
 import Personal from './pages/Personal'
+import Usuarios from './pages/Usuarios'
 import Proximamente from './pages/Proximamente'
 
 function Spinner() {
@@ -24,10 +26,41 @@ function Spinner() {
   )
 }
 
+function PendingScreen() {
+  const { signOut, profile } = useAuth()
+  return (
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-14 h-14 bg-emerald-500 rounded-2xl flex items-center justify-center mb-4">
+            <Warehouse size={28} className="text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-white">Park Stock</h1>
+        </div>
+        <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+          <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Clock size={28} className="text-amber-500" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-800 mb-2">Acceso pendiente</h2>
+          <p className="text-slate-500 text-sm mb-1">Hola {profile?.nombre},</p>
+          <p className="text-slate-500 text-sm mb-6">
+            Tu cuenta está registrada y esperando aprobación.
+            Un administrador te va a dar acceso en breve.
+          </p>
+          <button onClick={signOut} className="text-sm text-slate-400 hover:text-slate-600 underline transition-colors">
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function Guard({ children, roles }) {
   const { user, profile, loading } = useAuth()
   if (loading) return <Spinner />
   if (!user) return <Navigate to="/login" replace />
+  if (profile && !profile.activo) return <PendingScreen />
   if (roles && profile && !roles.includes(profile.rol)) return <Navigate to="/" replace />
   return children
 }
@@ -44,13 +77,14 @@ function AppRoutes() {
         <Route path="supervisores" element={<Guard roles={['admin']}><Supervisores /></Guard>} />
         <Route path="clientes"    element={<Guard roles={['admin']}><Clientes /></Guard>} />
         <Route path="importar"    element={<Guard roles={['admin']}><Importar /></Guard>} />
-        <Route path="analisis"    element={<Guard roles={['admin','supervisor']}><Analisis /></Guard>} />
-        <Route path="mapa"        element={<Guard roles={['admin','supervisor','operario']}><Mapa /></Guard>} />
+        <Route path="analisis"    element={<Guard roles={['admin','supervisor','compras']}><Analisis /></Guard>} />
+        <Route path="mapa"        element={<Guard roles={['admin','supervisor','repartidor']}><Mapa /></Guard>} />
+        <Route path="personal"    element={<Guard roles={['admin']}><Personal /></Guard>} />
+        <Route path="usuarios"    element={<Guard roles={['admin']}><Usuarios /></Guard>} />
         <Route path="modelo"      element={<Guard roles={['admin','supervisor']}><Proximamente titulo="Planilla Modelo" /></Guard>} />
-        <Route path="pedidos"     element={<Guard roles={['admin','supervisor','preparador']}><Proximamente titulo="Pedidos" /></Guard>} />
+        <Route path="pedidos"     element={<Guard roles={['admin','preparador']}><Proximamente titulo="Pedidos" /></Guard>} />
         <Route path="rutas"       element={<Guard roles={['admin','repartidor']}><Proximamente titulo="Rutas" /></Guard>} />
-        <Route path="stock"       element={<Guard roles={['admin']}><Proximamente titulo="Stock" /></Guard>} />
-        <Route path="usuarios"    element={<Guard roles={['admin']}><Proximamente titulo="Usuarios" /></Guard>} />
+        <Route path="stock"       element={<Guard roles={['admin','compras']}><Proximamente titulo="Stock" /></Guard>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
