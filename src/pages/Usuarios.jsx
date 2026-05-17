@@ -116,7 +116,7 @@ export default function Usuarios() {
 }
 
 function PendingCard({ u, saving, onAprobar, isMe }) {
-  const [rolSeleccionado, setRolSeleccionado] = useState('operativo')
+  const [rolSeleccionado, setRolSeleccionado] = useState('repartidor')
 
   return (
     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
