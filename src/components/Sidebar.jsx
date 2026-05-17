@@ -2,27 +2,27 @@ import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, MapPin, Package, ClipboardList,
   ShoppingCart, Truck, Warehouse, Users, X,
-  UserCheck, Building2, Upload, BarChart2, Map
+  UserCheck, Building2, Upload, BarChart2, Map, UserCog
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 const NAV = [
-  { path: '/',          icon: LayoutDashboard, label: 'Dashboard',      roles: ['admin','supervisor','preparador','repartidor'] },
-  { path: '/lugares',   icon: MapPin,          label: 'Lugares',        roles: ['admin','supervisor'] },
-  { path: '/productos', icon: Package,         label: 'Productos',      roles: ['admin'] },
-  { path: '/importar',  icon: Upload,          label: 'Importar',       roles: ['admin'] },
-  { path: '/analisis',  icon: BarChart2,       label: 'Análisis',       roles: ['admin','supervisor'] },
-  { path: '/mapa',      icon: Map, Users,             label: 'Mapa',           roles: ['admin','supervisor','operario'] },
-  { path: '/modelo',    icon: ClipboardList,   label: 'Planilla Modelo',roles: ['admin','supervisor'] },
-  { path: '/pedidos',   icon: ShoppingCart,    label: 'Pedidos',        roles: ['admin','supervisor','preparador'] },
-  { path: '/rutas',     icon: Truck,           label: 'Rutas',          roles: ['admin','repartidor'] },
-  { path: '/stock',     icon: Warehouse,       label: 'Stock',          roles: ['admin'] },
-  { path: '/usuarios',  icon: Users,           label: 'Usuarios',       roles: ['admin'] },
+  { path: '/',          icon: LayoutDashboard, label: 'Dashboard',       roles: ['admin','compras','preparador','repartidor','recepcion'] },
+  { path: '/lugares',   icon: MapPin,          label: 'Lugares',         roles: ['admin','supervisor'] },
+  { path: '/productos', icon: Package,         label: 'Productos',       roles: ['admin'] },
+  { path: '/importar',  icon: Upload,          label: 'Importar',        roles: ['admin'] },
+  { path: '/analisis',  icon: BarChart2,       label: 'Análisis',        roles: ['admin','compras'] },
+  { path: '/mapa',      icon: Map,             label: 'Mapa',            roles: ['admin','repartidor'] },
+  { path: '/pedidos',   icon: ShoppingCart,    label: 'Pedidos',         roles: ['admin','preparador'] },
+  { path: '/rutas',     icon: Truck,           label: 'Rutas',           roles: ['admin','repartidor'] },
+  { path: '/stock',     icon: Warehouse,       label: 'Stock',           roles: ['admin','compras'] },
 ]
 
 const NAV_CONFIG = [
-  { path: '/supervisores', icon: UserCheck,  label: 'Supervisores', roles: ['admin'] },
-  { path: '/clientes',     icon: Building2,  label: 'Clientes',     roles: ['admin'] },
+  { path: '/personal',    icon: UserCog,  label: 'Personal',     roles: ['admin'] },
+  { path: '/usuarios',    icon: Users,    label: 'Usuarios',     roles: ['admin'] },
+  { path: '/supervisores',icon: UserCheck,label: 'Supervisores', roles: ['admin'] },
+  { path: '/clientes',    icon: Building2,label: 'Clientes',     roles: ['admin'] },
 ]
 
 export default function Sidebar({ open, onClose }) {
@@ -62,6 +62,9 @@ export default function Sidebar({ open, onClose }) {
         </div>
 
         <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
+          {items.length === 0 && (
+            <p className="text-xs text-slate-500 px-3 py-2">Cargando menú...</p>
+          )}
           {items.map(({ path, icon: Icon, label }) => (
             <NavLink key={path} to={path} end={path === '/'} onClick={onClose} className={linkClass}>
               <Icon size={17} />
@@ -85,8 +88,8 @@ export default function Sidebar({ open, onClose }) {
         </nav>
 
         <div className="p-4 border-t border-slate-700">
-          <div className="text-xs text-slate-500 truncate">{profile?.nombre}</div>
-          <div className="text-xs text-slate-600 capitalize">{rol}</div>
+          <div className="text-xs text-slate-400 font-medium truncate">{profile?.nombre || '...'}</div>
+          <div className="text-xs text-slate-600 capitalize">{rol || 'cargando...'}</div>
         </div>
       </aside>
     </>
