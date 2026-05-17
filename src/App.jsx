@@ -13,6 +13,7 @@ import Analisis from './pages/Analisis'
 import Mapa from './pages/Mapa'
 import Personal from './pages/Personal'
 import Usuarios from './pages/Usuarios'
+import Perfil from './pages/Perfil'
 import Proximamente from './pages/Proximamente'
 
 function Spinner() {
@@ -85,6 +86,7 @@ function AppRoutes() {
         <Route path="pedidos"     element={<Guard roles={['admin','preparador']}><Proximamente titulo="Pedidos" /></Guard>} />
         <Route path="rutas"       element={<Guard roles={['admin','repartidor']}><Proximamente titulo="Rutas" /></Guard>} />
         <Route path="stock"       element={<Guard roles={['admin','compras']}><Proximamente titulo="Stock" /></Guard>} />
+        <Route path="perfil"     element={<Guard><Perfil /></Guard>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

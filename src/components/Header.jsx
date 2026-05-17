@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-import { Menu, LogOut, Bell, User, ChevronDown } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Menu, LogOut, Bell, User, ChevronDown, UserCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 const ROL_LABELS = {
@@ -12,6 +13,7 @@ const ROL_LABELS = {
 
 export default function Header({ onMenuClick }) {
   const { profile, signOut } = useAuth()
+  const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const ref = useRef(null)
 
@@ -72,6 +74,13 @@ export default function Header({ onMenuClick }) {
                   {ROL_LABELS[profile?.rol] || profile?.rol}
                 </span>
               </div>
+              <button
+                onClick={() => { setMenuOpen(false); navigate('/perfil') }}
+                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                <UserCircle size={15} />
+                Mi perfil
+              </button>
               <button
                 onClick={() => { setMenuOpen(false); signOut() }}
                 className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
