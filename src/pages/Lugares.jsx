@@ -54,6 +54,7 @@ export default function Lugares() {
   const [filtered, setFiltered]     = useState([])
   const [search, setSearch]         = useState('')
   const [estadoFilter, setEstadoFilter] = useState('todos')
+  const [clienteFilter, setClienteFilter] = useState('todos')
   const [loading, setLoading]       = useState(true)
   const [supervisores, setSupervisores] = useState([])
   const [clientes, setClientes]     = useState([])
@@ -172,6 +173,7 @@ export default function Lugares() {
   useEffect(() => {
     let data = rows
     if (estadoFilter !== 'todos') data = data.filter(r => r.estado === estadoFilter)
+    if (clienteFilter !== 'todos') data = data.filter(r => String(r.cliente_id ?? '') === String(clienteFilter))
     if (search.trim()) {
       const q = search.toLowerCase()
       data = data.filter(r =>
@@ -191,7 +193,7 @@ export default function Lugares() {
       return sortDir === 'asc' ? cmp : -cmp
     })
     setFiltered(data)
-  }, [rows, search, estadoFilter, sortField, sortDir])
+  }, [rows, search, estadoFilter, clienteFilter, sortField, sortDir])
 
   async function fetchAll() {
     setLoading(true)
@@ -337,6 +339,7 @@ export default function Lugares() {
 
   const activos   = rows.filter(r => r.estado === 'activo').length
   const inactivos = rows.filter(r => r.estado === 'inactivo').length
+  const clienteName = (id) => clientes.find(c => String(c.id) === String(id))?.nombre || '—'
 
   const inp  = 'w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500'
   const chk  = 'w-4 h-4 accent-emerald-600 cursor-pointer'
@@ -376,6 +379,16 @@ export default function Lugares() {
             <option value="inactivo">Inactivo</option>
             <option value="revisar">Revisar</option>
           </select>
+          {clientes.length > 0 && (
+            <select value={clienteFilter} onChange={e => setClienteFilter(e.target.value)}
+              className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+              <option value="todos">Todos los clientes</option>
+              <option value="">Sin cliente</option>
+              {clientes.map(cl => (
+                <option key={cl.id} value={cl.id}>{cl.nombre}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         {loading ? (
@@ -413,7 +426,14 @@ export default function Lugares() {
                         {row.id_numerico ?? '—'}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="font-medium text-slate-800">{row.nombre}</div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-slate-800">{row.nombre}</span>
+                          {row.cliente_id && (
+                            <span className="px-1.5 py-0.5 rounded text-xs bg-blue-50 text-blue-600 font-medium shrink-0">
+                              {clienteName(row.cliente_id)}
+                            </span>
+                          )}
+                        </div>
                         {row.nombre_anterior && (
                           <div className="text-xs text-slate-400 mt-0.5">ant. <span className="text-slate-500">{row.nombre_anterior}</span></div>
                         )}
