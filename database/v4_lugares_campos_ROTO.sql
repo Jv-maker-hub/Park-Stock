@@ -1,0 +1,110 @@
+-- ============================================================
+-- Park Stock – Migration v4
+-- Extra fields for lugares + Importar/Análisis support
+-- Run in Supabase SQL Editor
+-- ============================================================
+
+-- Extra fields for lugares
+ALTER TABLE lugares
+  ADD COLUMN IF NOT EXISTS metros_cuadrados     decimal(10,2),
+  ADD COLUMN IF NOT EXISTS cantidad_empleados   integer,
+  ADD COLUMN IF NOT EXISTS cantidad_banos       integer,
+  ADD COLUMN IF NOT EXISTS cantidad_pisos       integer,
+  ADD COLUMN IF NOT EXISTS tipo_lugar           text DEFAULT 'otro'
+    CHECK (tipo_lugar IN ('administrativo','salud','deportivo','educativo','seguridad','servicios','otro')),
+  ADD COLUMN IF NOT EXISTS acceso_publico       boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS tiene_cocina         boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS frecuencia_limpieza  integer,
+  ADD COLUMN IF NOT EXISTS personal_limpieza    integer,
+  ADD COLUMN IF NOT EXISTS dia_reparto          text;
+
+-- mapeo_lugares
+CREATE TABLE IF NOT EXISTS mapeo_lugares (
+  id              bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  nombre_planilla text NOT NULL UNIQUE,
+  lugar_id        bigint REFERENCES lugares(id) ON DELETE SET NULL,
+  confirmado      boolean DEFAULT false,
+  created_at      timestamptz DEFAULT now()
+);
+
+-- mapeo_productos
+CREATE TABLE IF NOT EXISTS mapeo_productos (
+  id              bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  codigo_planilla text,
+  nombre_planilla text NOT NULL UNIQUE,
+  producto_id     bigint REFERENCES productos(id) ON DELETE SET NULL,
+  confirmado      boolean DEFAULT false,
+  created_at      timestamptz DEFAULT now()
+);
+
+-- entregas
+CREATE TABLE IF NOT EXISTS entregas (
+  id                bigint PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+  lugar_id          bigint NOT NULL REFERENCES lugares(id) ON DELETE CASCADE,
+  producto_id       bigint NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+  mes               date   NOT NULL,
+  cantidad_mensual  decimal(10,3),
+  semana_1          decimal(10,3),
+  semana_2          decimal(10,3),
+  semana_3          decimal(10,3),
+  semana_4          decimal(10,3),
+  semana_5          decimal(10,3),
+  fuente            text DEFAULT 'planilla_excel',
+  archivo_origen    text,
+  contacto_planilla text,
+  created_at        timestamptz DEFAULT now(),
+  UNIQUE (lugar_id, producto_id, mes)
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_entregas_lugar_mes ON entregas(lugar_id, mes);
+CREATE INDEX IF NOT EXISTS idx_entregas_producto  ON entregas(producto_id);
+CREATE INDEX IF NOT EXISTS idx_entregas_mes       ON entregas(mes);
+
+-- RLS
+ALTER TABLE mapeo_lugares   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mapeo_productos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE entregas        ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='mapeo_lugares' AND policyname='mapeo_lugares_admin') THEN
+    CREATE POLICY mapeo_lugares_admin ON mapeo_lugares
+      USING (get_my_role() IN ('admin','supervisor'))
+      WITH CHECK (get_my_role() = 'admin');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='mapeo_productos' AND policyname='mapeo_productos_admin') THEN
+    CREATE POLICY mapeo_productos_admin ON mapeo_productos
+      USING (get_my_role() IN ('admin','supervisor'))
+      WITH CHECK (get_my_role() = 'admin');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='entregas' AND policyname='entregas_read') THEN
+    CREATE POLICY entregas_read ON entregas FOR SELECT
+      USING (get_my_role() IN ('admin','supervisor','preparador','repartidor'));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename='entregas' AND policyname='entregas_write') THEN
+    CREATE POLICY entregas_write ON entregas FOR ALL
+      USING (get_my_role() = 'admin')
+      WITH CHECK (get_my_role() = 'admin');
+  END IF;
+END $$;
+
+-- View: consumo mensual por lugar
+CREATE OR REPLACE VIEW v_consumo_mensual AS
+SELECT
+  e.mes,
+  l.id   AS lugar_id,
+  l.nombre AS lugar,
+  l.tipo_lugar,
+  l.metros_cuadrados,
+  l.cantidad_empleados,
+  p.id   AS producto_id,
+  p.nombre AS producto,
+  p.unidad_entrega,
+  c.nombre AS categoria,
+  e.cantidad_mensual,
+  e.semana_1, e.semana_2, e.semana_3, e.semana_4, e.semana_5
+FROM entregas e
+JOIN lugares   l ON l.id = e.lugar_id
+JOIN productos p ON p.id = e.producto_id
+LEFT JOIN categorias_producto c ON c.id = p.categoria_id;
