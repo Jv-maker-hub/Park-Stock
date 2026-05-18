@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, Search, Phone, AlertTriangle, UserX } from 'lucide-react'
+import { Plus, Search, Phone, AlertTriangle, UserX, ChevronUp, ChevronDown } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import Modal from '../components/Modal'
 
@@ -10,7 +10,7 @@ const ESTADO_COLORS = {
 
 const empty = {
   dni: '', nombre: '', apellido: '', celular: '',
-  estado: 'activo', cargo: '', id_externo: '', observaciones: '',
+  estado: 'activo', id_externo: '', observaciones: '',
 }
 
 function waLink(tel) {
@@ -22,17 +22,37 @@ function waLink(tel) {
   return `https://wa.me/${clean}`
 }
 
+function SortHeader({ label, col, sortCol, sortDir, onSort }) {
+  const active = sortCol === col
+  return (
+    <th
+      className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide cursor-pointer select-none hover:text-slate-700 group"
+      onClick={() => onSort(col)}
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        <span className="inline-flex flex-col leading-none">
+          <ChevronUp  size={10} className={active && sortDir === 'asc'  ? 'text-emerald-600' : 'text-slate-300 group-hover:text-slate-400'} />
+          <ChevronDown size={10} className={active && sortDir === 'desc' ? 'text-emerald-600' : 'text-slate-300 group-hover:text-slate-400'} />
+        </span>
+      </span>
+    </th>
+  )
+}
+
 export default function Personal() {
   const [rows, setRows]         = useState([])
   const [filtered, setFiltered] = useState([])
   const [search, setSearch]     = useState('')
   const [estadoFilter, setEstadoFilter] = useState('activo')
+  const [sortCol, setSortCol]   = useState('apellido')
+  const [sortDir, setSortDir]   = useState('asc')
   const [loading, setLoading]   = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm]         = useState(empty)
   const [saving, setSaving]     = useState(false)
   const [error, setError]       = useState('')
-  const [alertas, setAlertas]   = useState([])  // lugares con responsable inactivo
+  const [alertas, setAlertas]   = useState([])
 
   useEffect(() => { fetchAll() }, [])
 
@@ -42,33 +62,39 @@ export default function Personal() {
     if (search.trim()) {
       const q = search.toLowerCase()
       data = data.filter(r =>
-        r.nombre.toLowerCase().includes(q) ||
-        r.apellido.toLowerCase().includes(q) ||
-        r.dni.includes(q) ||
-        r.celular?.includes(q) ||
-        r.cargo?.toLowerCase().includes(q)
+        r.nombre?.toLowerCase().includes(q) ||
+        r.apellido?.toLowerCase().includes(q) ||
+        r.dni?.includes(q) ||
+        r.celular?.includes(q)
       )
     }
-    setFiltered([...data].sort((a, b) => a.apellido.localeCompare(b.apellido, 'es')))
-  }, [rows, search, estadoFilter])
+    data = [...data].sort((a, b) => {
+      const va = (a[sortCol] ?? '').toString().toLowerCase()
+      const vb = (b[sortCol] ?? '').toString().toLowerCase()
+      const cmp = va.localeCompare(vb, 'es')
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+    setFiltered(data)
+  }, [rows, search, estadoFilter, sortCol, sortDir])
+
+  function handleSort(col) {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else { setSortCol(col); setSortDir('asc') }
+  }
 
   async function fetchAll() {
     setLoading(true)
-    const { data: personal } = await supabase.from('personal').select('*').order('apellido')
+    const { data: personal } = await supabase.from('personal').select('*')
     setRows(personal ?? [])
-
-    // Buscar alertas: lugares con responsable inactivo
     const { data: lugares } = await supabase
       .from('lugares')
-      .select('id, id_numerico, nombre, responsable_id, personal:responsable_id(id, nombre, apellido, estado)')
+      .select('id, nombre, responsable_id, personal:responsable_id(id, nombre, apellido, estado)')
       .not('responsable_id', 'is', null)
-    const alertasDetectadas = (lugares ?? []).filter(l => l.personal?.estado === 'inactivo')
-    setAlertas(alertasDetectadas)
-
+    setAlertas((lugares ?? []).filter(l => l.personal?.estado === 'inactivo'))
     setLoading(false)
   }
 
-  function openNew()  { setForm(empty); setError(''); setModalOpen(true) }
+  function openNew()     { setForm(empty); setError(''); setModalOpen(true) }
   function openEdit(row) { setForm({ ...empty, ...row }); setError(''); setModalOpen(true) }
 
   async function handleSave() {
@@ -82,7 +108,6 @@ export default function Personal() {
       apellido:      form.apellido.trim(),
       celular:       form.celular?.trim()       || null,
       estado:        form.estado,
-      cargo:         form.cargo?.trim()         || null,
       id_externo:    form.id_externo?.trim()    || null,
       observaciones: form.observaciones?.trim() || null,
       updated_at:    new Date().toISOString(),
@@ -100,7 +125,6 @@ export default function Personal() {
 
   return (
     <div>
-      {/* Alertas */}
       {alertas.length > 0 && (
         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
           <div className="flex items-center gap-2 text-amber-700 font-medium text-sm mb-1">
@@ -109,8 +133,7 @@ export default function Personal() {
           <div className="flex flex-wrap gap-2 mt-1">
             {alertas.map(l => (
               <span key={l.id} className="inline-flex items-center gap-1 text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
-                <UserX size={11} />
-                {l.nombre} — {l.personal.nombre} {l.personal.apellido}
+                <UserX size={11} /> {l.nombre} — {l.personal.nombre} {l.personal.apellido}
               </span>
             ))}
           </div>
@@ -155,9 +178,9 @@ export default function Personal() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100">
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Apellido y nombre</th>
+                  <SortHeader label="Apellido"  col="apellido" sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
+                  <SortHeader label="Nombre"    col="nombre"   sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
                   <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide hidden sm:table-cell">DNI</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide hidden md:table-cell">Cargo</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide hidden md:table-cell">Celular</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Estado</th>
                 </tr>
@@ -166,12 +189,12 @@ export default function Personal() {
                 {filtered.map(row => (
                   <tr key={row.id} onClick={() => openEdit(row)}
                     className="hover:bg-slate-50 transition-colors cursor-pointer">
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-slate-800">{row.apellido}, {row.nombre}</div>
+                    <td className="px-4 py-3 font-medium text-slate-800">{row.apellido}</td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {row.nombre}
                       {row.id_externo && <div className="text-xs text-slate-400">ext. {row.id_externo}</div>}
                     </td>
-                    <td className="px-4 py-3 text-slate-600 hidden sm:table-cell font-mono text-xs">{row.dni}</td>
-                    <td className="px-4 py-3 text-slate-500 hidden md:table-cell">{row.cargo || '—'}</td>
+                    <td className="px-4 py-3 text-slate-500 hidden sm:table-cell font-mono text-xs">{row.dni}</td>
                     <td className="px-4 py-3 hidden md:table-cell">
                       {row.celular ? (
                         <a href={waLink(row.celular) || '#'} target="_blank" rel="noreferrer"
@@ -221,11 +244,6 @@ export default function Personal() {
               )}
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Cargo</label>
-              <input value={form.cargo ?? ''} onChange={e => setForm(f => ({ ...f, cargo: e.target.value }))}
-                placeholder="Ej: Encargada, Personal limpieza" className={inp} />
-            </div>
-            <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Estado</label>
               <select value={form.estado} onChange={e => setForm(f => ({ ...f, estado: e.target.value }))}
                 className={inp + ' bg-white'}>
@@ -234,11 +252,11 @@ export default function Personal() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">ID sistema externo</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">ID externo (RP)</label>
               <input value={form.id_externo ?? ''} onChange={e => setForm(f => ({ ...f, id_externo: e.target.value }))}
-                placeholder="ID del sistema de RRHH" className={inp} />
+                placeholder="Legajo / ID RRHH" className={inp} />
             </div>
-            <div>
+            <div className="col-span-2">
               <label className="block text-xs font-medium text-slate-600 mb-1">Observaciones</label>
               <input value={form.observaciones ?? ''} onChange={e => setForm(f => ({ ...f, observaciones: e.target.value }))} className={inp} />
             </div>
@@ -248,9 +266,7 @@ export default function Personal() {
 
           <div className="flex justify-end gap-3 pt-2">
             <button onClick={() => setModalOpen(false)}
-              className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 transition-colors">
-              Cancelar
-            </button>
+              className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 transition-colors">Cancelar</button>
             <button onClick={handleSave} disabled={saving}
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50">
               {saving ? 'Guardando...' : 'Guardar'}
