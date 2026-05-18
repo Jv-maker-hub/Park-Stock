@@ -867,6 +867,7 @@ function ImportarPersonal() {
   const [saving, setSaving]     = useState(false)
   const [stats, setStats]       = useState(null)
   const [error, setError]       = useState('')
+  const [dragging, setDragging] = useState(false)
 
   function downloadTemplate() {
     const ws = XLSX.utils.aoa_to_sheet([
@@ -999,11 +1000,17 @@ function ImportarPersonal() {
               <Download size={13}/> Descargar plantilla
             </button>
           </div>
-          <label className="block border-2 border-dashed border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 rounded-xl p-10 text-center cursor-pointer transition-colors">
+          <label
+            className={`block border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors ${dragging ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 hover:border-emerald-400 hover:bg-emerald-50'}`}
+            onDragOver={e => { e.preventDefault(); setDragging(true) }}
+            onDragEnter={e => { e.preventDefault(); setDragging(true) }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f) }}
+          >
             <input type="file" accept=".xlsx,.xls,.csv" className="hidden"
               onChange={e => e.target.files[0] && handleFile(e.target.files[0])} />
-            <Upload size={28} className="mx-auto text-slate-400 mb-2"/>
-            <p className="text-sm font-medium text-slate-600">Subí la nómina en Excel o CSV</p>
+            <Upload size={28} className={`mx-auto mb-2 ${dragging ? 'text-emerald-500' : 'text-slate-400'}`}/>
+            <p className="text-sm font-medium text-slate-600">{dragging ? 'Soltá el archivo acá' : 'Subí la nómina en Excel o CSV'}</p>
             <p className="text-xs text-slate-400 mt-1">Click o arrastrá el archivo</p>
           </label>
         </div>
