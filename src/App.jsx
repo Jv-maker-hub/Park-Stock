@@ -16,6 +16,7 @@ import Usuarios from './pages/Usuarios'
 import Perfil from './pages/Perfil'
 import Pedidos from './pages/Pedidos'
 import PedidoDetalle from './pages/PedidoDetalle'
+import ImportarModelo from './pages/ImportarModelo'
 import Proximamente from './pages/Proximamente'
 
 function Spinner() {
@@ -90,6 +91,7 @@ function AppRoutes() {
         <Route path="rutas"       element={<Guard roles={['admin','repartidor']}><Proximamente titulo="Rutas" /></Guard>} />
         <Route path="stock"       element={<Guard roles={['admin','compras']}><Proximamente titulo="Stock" /></Guard>} />
         <Route path="perfil"     element={<Guard><Perfil /></Guard>} />
+        <Route path="importar-modelo" element={<Guard roles={['admin','compras']}><ImportarModelo /></Guard>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

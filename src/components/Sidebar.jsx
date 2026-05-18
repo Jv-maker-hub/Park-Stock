@@ -10,6 +10,7 @@ const NAV = [
   { path: '/',          icon: LayoutDashboard, label: 'Dashboard',       roles: ['admin','compras','preparador','repartidor','recepcion'] },
   { path: '/lugares',   icon: MapPin,          label: 'Lugares',         roles: ['admin','supervisor'] },
   { path: '/productos', icon: Package,         label: 'Productos',       roles: ['admin'] },
+  { path: '/importar-modelo', icon: FileSpreadsheet, label: 'Pedido Modelo', roles: ['admin','compras'] },
   { path: '/importar',  icon: Upload,          label: 'Importar',        roles: ['admin'] },
   { path: '/analisis',  icon: BarChart2,       label: 'Análisis',        roles: ['admin','compras'] },
   { path: '/mapa',      icon: Map,             label: 'Mapa',            roles: ['admin','repartidor'] },
