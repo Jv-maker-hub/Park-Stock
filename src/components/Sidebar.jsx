@@ -18,6 +18,7 @@ const NAV = [
   { path: '/rutas',     icon: Truck,           label: 'Rutas',        roles: ['admin','repartidor'] },
   { path: '/stock',     icon: Warehouse,       label: 'Stock',        roles: ['admin','compras'] },
   { path: '/auditor',   icon: ClipboardCheck,  label: 'Auditor',      roles: ['admin','auditor','compras'] },
+  { path: '/control-diario', icon: ClipboardList,  label: 'Control diario', roles: ['admin','auditor','compras','repartidor'] },
 ]
 
 const NAV_CONFIG = [
