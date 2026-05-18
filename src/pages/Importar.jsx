@@ -448,9 +448,9 @@ function ImportLayout({ step, saving, result, templateBtn, uploadHint, onFile,
   onReset, onImport, toImport, duplicatePanel, previewTable, stats, resultLabel }) {
 
   const [dragging, setDragging] = useState(false)
+  const uploadRef = useRef(null)
 
   function handleDrop(e) {
-    e.preventDefault(); setDragging(false)
     const file = e.dataTransfer.files?.[0]
     if (file) onFile({ target: { files: [file] } })
   }
@@ -464,14 +464,15 @@ function ImportLayout({ step, saving, result, templateBtn, uploadHint, onFile,
         </div>
         {templateBtn}
       </div>
-      <label
-        className={`flex flex-col items-center gap-4 cursor-pointer group rounded-xl border-2 border-dashed p-8 transition-colors ${dragging ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 hover:border-emerald-300 hover:bg-slate-50'}`}
-        onDragOver={e => { e.preventDefault(); setDragging(true) }}
-        onDragEnter={e => { e.preventDefault(); setDragging(true) }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={handleDrop}
+      <div
+        className={`flex flex-col items-center gap-4 cursor-pointer rounded-xl border-2 border-dashed p-8 transition-colors ${dragging ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 hover:border-emerald-300 hover:bg-slate-50'}`}
+        onClick={() => uploadRef.current?.click()}
+        onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDragging(true) }}
+        onDragEnter={e => { e.preventDefault(); e.stopPropagation(); setDragging(true) }}
+        onDragLeave={e => { e.preventDefault(); setDragging(false) }}
+        onDrop={e => { e.preventDefault(); e.stopPropagation(); setDragging(false); handleDrop(e) }}
       >
-        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${dragging ? 'bg-emerald-100' : 'bg-emerald-50 group-hover:bg-emerald-100'}`}>
+        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${dragging ? 'bg-emerald-100' : 'bg-emerald-50'}`}>
           <Upload size={26} className="text-emerald-600"/>
         </div>
         <div className="text-center">
@@ -480,8 +481,8 @@ function ImportLayout({ step, saving, result, templateBtn, uploadHint, onFile,
           </div>
           <div className="text-xs text-slate-400 mt-1">arrastrá el archivo o hacé clic · .xlsx o .csv</div>
         </div>
-        <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={onFile}/>
-      </label>
+        <input ref={uploadRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={onFile}/>
+      </div>
     </div>
   )
 
@@ -562,6 +563,7 @@ function mesFromFilename(name) {
 }
 
 function ImportarPlanilla() {
+  const planillaRef = useRef(null)
   const [step, setStep]         = useState('upload')
   const [fileName, setFileName] = useState('')
   const [mes, setMes]           = useState('')
@@ -700,16 +702,20 @@ function ImportarPlanilla() {
 
       {step==='upload' && (
         <div className="bg-white rounded-xl border border-slate-200 p-8">
-          <label className="flex flex-col items-center gap-4 cursor-pointer group">
+          <div className="flex flex-col items-center gap-4 cursor-pointer group rounded-xl border-2 border-dashed border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 p-8 transition-colors"
+            onClick={() => planillaRef.current?.click()}
+            onDragOver={e => { e.preventDefault(); e.stopPropagation() }}
+            onDrop={e => { e.preventDefault(); e.stopPropagation(); const f = e.dataTransfer.files?.[0]; if (f) handleFile({ target: { files: [f] } }) }}
+          >
             <div className="w-14 h-14 rounded-2xl bg-emerald-50 group-hover:bg-emerald-100 flex items-center justify-center">
               <Upload size={26} className="text-emerald-600"/>
             </div>
             <div className="text-center">
               <div className="text-sm font-medium text-slate-700">Seleccioná la planilla Excel de Patri</div>
-              <div className="text-xs text-slate-400 mt-1">.xlsx</div>
+              <div className="text-xs text-slate-400 mt-1">arrastrá o hacé clic · .xlsx</div>
             </div>
-            <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFile}/>
-          </label>
+            <input ref={planillaRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleFile}/>
+          </div>
           {loading && <div className="flex justify-center gap-2 mt-6 text-sm text-slate-500"><Loader2 size={16} className="animate-spin"/> Procesando...</div>}
         </div>
       )}
