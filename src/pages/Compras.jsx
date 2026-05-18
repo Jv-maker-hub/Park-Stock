@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import {
   ShoppingCart, Package, TrendingDown, AlertTriangle,
   CheckCircle, Clock, ChevronRight, Plus, Trash2,
-  Send, X, ChevronDown, ChevronUp, RefreshCw, Loader2
+  Send, X, ChevronDown, ChevronUp, RefreshCw, Loader2, Download
 } from 'lucide-react'
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -643,11 +643,59 @@ export default function Compras() {
   const fetchProveedores = useCallback(async () => {
     const { data } = await supabase
       .from('proveedores')
-      .select('id, nombre')
+      .select('id, nombre, xubio_id')
       .eq('activo', true)
       .order('nombre')
     setProveedores(data || [])
   }, [])
+
+  // ── Sincronizar proveedores desde Xubio ──────────────────────────────────────
+  const [syncingProvs, setSyncingProvs] = useState(false)
+  const [syncResult, setSyncResult] = useState(null)
+
+  async function handleSyncProveedores() {
+    setSyncingProvs(true)
+    setSyncResult(null)
+    try {
+      const res = await fetch(`${WORKER_URL}/api/xubio/proveedores`)
+      if (!res.ok) throw new Error(`Worker error: ${res.status}`)
+      const xubioProvs = await res.json()
+
+      let nuevos = 0
+      let actualizados = 0
+
+      for (const p of xubioProvs) {
+        // Buscar si ya existe por xubio_id
+        const { data: existing } = await supabase
+          .from('proveedores')
+          .select('id')
+          .eq('xubio_id', p.xubio_id)
+          .maybeSingle()
+
+        if (existing) {
+          // Actualizar nombre si cambió
+          await supabase
+            .from('proveedores')
+            .update({ nombre: p.nombre })
+            .eq('id', existing.id)
+          actualizados++
+        } else {
+          // Insertar nuevo
+          await supabase
+            .from('proveedores')
+            .insert({ nombre: p.nombre, xubio_id: p.xubio_id, activo: true })
+          nuevos++
+        }
+      }
+
+      await fetchProveedores()
+      setSyncResult({ ok: true, nuevos, actualizados, total: xubioProvs.length })
+    } catch (e) {
+      setSyncResult({ ok: false, error: e.message })
+    } finally {
+      setSyncingProvs(false)
+    }
+  }
 
   useEffect(() => { fetchProyeccion() }, [fetchProyeccion])
   useEffect(() => { fetchOcs(); fetchProveedores() }, [fetchOcs, fetchProveedores])
@@ -740,6 +788,15 @@ export default function Compras() {
             <RefreshCw size={16}/>
           </button>
           <button
+            onClick={handleSyncProveedores}
+            disabled={syncingProvs}
+            title="Sincronizar proveedores desde Xubio"
+            className="flex items-center gap-2 px-3 py-2 border border-slate-200 text-slate-600 text-sm rounded-lg hover:bg-slate-50 disabled:opacity-50"
+          >
+            {syncingProvs ? <Loader2 size={15} className="animate-spin"/> : <Download size={15}/>}
+            Proveedores Xubio
+          </button>
+          <button
             onClick={() => handleNuevaOC([])}
             className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700"
           >
@@ -747,6 +804,17 @@ export default function Compras() {
           </button>
         </div>
       </div>
+
+      {/* Resultado sync */}
+      {syncResult && (
+        <div className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm ${syncResult.ok ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-700'}`}>
+          {syncResult.ok
+            ? <span>✓ Sincronización completa — {syncResult.nuevos} nuevos, {syncResult.actualizados} actualizados ({syncResult.total} proveedores en Xubio)</span>
+            : <span>✗ Error: {syncResult.error}</span>
+          }
+          <button onClick={() => setSyncResult(null)} className="ml-4 opacity-60 hover:opacity-100"><X size={14}/></button>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex border-b border-slate-200 gap-1">
