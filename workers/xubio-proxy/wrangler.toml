@@ -4,7 +4,7 @@ compatibility_date = "2024-01-01"
 
 [[kv_namespaces]]
 binding  = "XUBIO_CACHE"
-id       = "REEMPLAZAR_CON_ID_KV"   # wrangler kv:namespace create "XUBIO_CACHE"
+id       = "af0591cfe4784b3b808540270162d98d"
 
 # Secrets se configuran con:
 #   wrangler secret put XUBIO_CLIENT_ID

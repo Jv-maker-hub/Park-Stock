@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../supabaseClient'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import {
   Truck, PackageCheck, AlertTriangle, CheckCircle,

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../supabaseClient'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import {
   ShoppingCart, Package, TrendingDown, AlertTriangle,
@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
-const WORKER_URL = import.meta.env.VITE_XUBIO_WORKER_URL || 'https://xubio-proxy.TUSUBDOMINIO.workers.dev'
+const WORKER_URL = 'https://xubio-proxy.julianvilche.workers.dev'
 
 const ESTADO_LABELS = {
   borrador:               { label: 'Borrador',           color: 'slate' },
