@@ -14,6 +14,8 @@ import Mapa from './pages/Mapa'
 import Personal from './pages/Personal'
 import Usuarios from './pages/Usuarios'
 import Perfil from './pages/Perfil'
+import Pedidos from './pages/Pedidos'
+import PedidoDetalle from './pages/PedidoDetalle'
 import Proximamente from './pages/Proximamente'
 
 function Spinner() {
@@ -83,7 +85,8 @@ function AppRoutes() {
         <Route path="personal"    element={<Guard roles={['admin']}><Personal /></Guard>} />
         <Route path="usuarios"    element={<Guard roles={['admin']}><Usuarios /></Guard>} />
         <Route path="modelo"      element={<Guard roles={['admin','supervisor']}><Proximamente titulo="Planilla Modelo" /></Guard>} />
-        <Route path="pedidos"     element={<Guard roles={['admin','preparador']}><Proximamente titulo="Pedidos" /></Guard>} />
+        <Route path="pedidos"     element={<Guard roles={['admin','compras','preparador','repartidor']}><Pedidos /></Guard>} />
+        <Route path="pedidos/:id" element={<Guard roles={['admin','compras','preparador','repartidor']}><PedidoDetalle /></Guard>} />
         <Route path="rutas"       element={<Guard roles={['admin','repartidor']}><Proximamente titulo="Rutas" /></Guard>} />
         <Route path="stock"       element={<Guard roles={['admin','compras']}><Proximamente titulo="Stock" /></Guard>} />
         <Route path="perfil"     element={<Guard><Perfil /></Guard>} />
