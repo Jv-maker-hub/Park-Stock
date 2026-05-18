@@ -2,21 +2,22 @@ import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, FileSpreadsheet, MapPin, Package, ClipboardList,
   ShoppingCart, Truck, Warehouse, Users, X,
-  UserCheck, Building2, Upload, BarChart2, Map, UserCog
+  UserCheck, Building2, Upload, BarChart2, Map, UserCog, ClipboardCheck
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 const NAV = [
-  { path: '/',          icon: LayoutDashboard, label: 'Dashboard',       roles: ['admin','compras','preparador','repartidor','recepcion'] },
-  { path: '/lugares',   icon: MapPin,          label: 'Lugares',         roles: ['admin','supervisor'] },
-  { path: '/productos', icon: Package,         label: 'Productos',       roles: ['admin'] },
+  { path: '/',          icon: LayoutDashboard, label: 'Dashboard',    roles: ['admin','compras','preparador','repartidor','recepcion'] },
+  { path: '/lugares',   icon: MapPin,          label: 'Lugares',      roles: ['admin','supervisor'] },
+  { path: '/productos', icon: Package,         label: 'Productos',    roles: ['admin'] },
   { path: '/importar-modelo', icon: FileSpreadsheet, label: 'Pedido Modelo', roles: ['admin','compras'] },
-  { path: '/importar',  icon: Upload,          label: 'Importar',        roles: ['admin'] },
-  { path: '/analisis',  icon: BarChart2,       label: 'Análisis',        roles: ['admin','compras'] },
-  { path: '/mapa',      icon: Map,             label: 'Mapa',            roles: ['admin','repartidor'] },
-  { path: '/pedidos',   icon: ShoppingCart,    label: 'Pedidos',         roles: ['admin','preparador'] },
-  { path: '/rutas',     icon: Truck,           label: 'Rutas',           roles: ['admin','repartidor'] },
-  { path: '/stock',     icon: Warehouse,       label: 'Stock',           roles: ['admin','compras'] },
+  { path: '/importar',  icon: Upload,          label: 'Importar',     roles: ['admin'] },
+  { path: '/analisis',  icon: BarChart2,       label: 'Análisis',     roles: ['admin','compras'] },
+  { path: '/mapa',      icon: Map,             label: 'Mapa',         roles: ['admin','repartidor'] },
+  { path: '/pedidos',   icon: ShoppingCart,    label: 'Pedidos',      roles: ['admin','preparador'] },
+  { path: '/rutas',     icon: Truck,           label: 'Rutas',        roles: ['admin','repartidor'] },
+  { path: '/stock',     icon: Warehouse,       label: 'Stock',        roles: ['admin','compras'] },
+  { path: '/auditor',   icon: ClipboardCheck,  label: 'Auditor',      roles: ['admin','auditor','compras'] },
 ]
 
 const NAV_CONFIG = [
