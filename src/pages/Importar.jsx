@@ -18,7 +18,7 @@ function norm(s) { return s?.toString().toLowerCase().trim() ?? '' }
 // ── component ─────────────────────────────────────────────────
 export default function Importar() {
   const [tab, setTab] = useState('lugares')
-  const TABS = [['lugares','Lugares'],['productos','Productos'],['planilla','Planillas de entregas']]
+  const TABS = [['lugares','Lugares'],['productos','Productos'],['planilla','Planillas de entregas'],['personal','Nómina']]
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-5">
@@ -36,6 +36,7 @@ export default function Importar() {
       {tab === 'lugares'   && <ImportarLugares />}
       {tab === 'productos' && <ImportarProductos />}
       {tab === 'planilla'  && <ImportarPlanilla />}
+      {tab === 'personal'  && <ImportarPersonal />}
     </div>
   )
 }
@@ -848,6 +849,253 @@ function ImportarPlanilla() {
           <button onClick={()=>{setStep('upload');setFileName('');setSheets([]);setMes('');setStats(null)}}
             className="mt-6 px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg">
             Importar otra planilla
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ═════════════════════════════════════════════════════════════
+// TAB: NÓMINA / PERSONAL
+// ═════════════════════════════════════════════════════════════
+function ImportarPersonal() {
+  const [step, setStep]         = useState('upload')  // upload | preview | done
+  const [fileName, setFileName] = useState('')
+  const [rows, setRows]         = useState([])   // parsed from Excel
+  const [preview, setPreview]   = useState([])   // enriched with duplicate info
+  const [saving, setSaving]     = useState(false)
+  const [stats, setStats]       = useState(null)
+  const [error, setError]       = useState('')
+
+  function downloadTemplate() {
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['Nombre', 'Apellido', 'DNI', 'Celular', 'Cargo', 'ID Externo (RP)'],
+      ['Juan', 'Pérez', '12345678', '1123456789', 'Limpiador', ''],
+      ['María', 'González', '23456789', '1187654321', 'Supervisora', ''],
+    ])
+    ws['!cols'] = [20,20,15,18,20,20].map(w => ({ wch: w }))
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Nómina')
+    XLSX.writeFile(wb, 'template_nomina.xlsx')
+  }
+
+  async function handleFile(file) {
+    setError('')
+    setFileName(file.name)
+    const buf = await file.arrayBuffer()
+    const wb  = XLSX.read(buf, { type: 'array' })
+    const ws  = wb.Sheets[wb.SheetNames[0]]
+    const raw = XLSX.utils.sheet_to_json(ws, { defval: '' })
+
+    if (!raw.length) { setError('El archivo está vacío'); return }
+
+    // Normalizar columnas
+    const normalize_key = k => k.toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').trim()
+    const COL_MAP = {
+      nombre: ['nombre', 'name', 'first name'],
+      apellido: ['apellido', 'surname', 'last name', 'apellidos'],
+      dni: ['dni', 'documento', 'doc', 'cuil', 'cuit'],
+      celular: ['celular', 'telefono', 'cel', 'phone', 'mobile'],
+      cargo: ['cargo', 'rol', 'puesto', 'role', 'position'],
+      id_externo: ['id externo (rp)', 'id externo', 'id rp', 'rp', 'legajo', 'external id'],
+    }
+    const headers = Object.keys(raw[0]).reduce((acc, h) => {
+      const hn = normalize_key(h)
+      for (const [field, aliases] of Object.entries(COL_MAP)) {
+        if (aliases.some(a => hn.includes(a))) acc[h] = field
+      }
+      return acc
+    }, {})
+
+    const parsed = raw.map(row => {
+      const r = {}
+      for (const [rawKey, field] of Object.entries(headers)) {
+        r[field] = row[rawKey]?.toString().trim() || ''
+      }
+      return r
+    }).filter(r => r.dni || r.nombre)  // al menos uno de los dos
+
+    // Limpiar DNIs (solo números)
+    parsed.forEach(r => {
+      r.dni = r.dni?.replace(/\D/g,'') || ''
+    })
+
+    // Buscar duplicados en DB
+    const dnis = parsed.map(r => r.dni).filter(Boolean)
+    const { data: existentes } = await supabase
+      .from('personal').select('id, dni, nombre, apellido, estado')
+      .in('dni', dnis)
+    const existMap = {}
+    for (const e of existentes || []) existMap[e.dni] = e
+
+    // Detectar duplicados dentro del mismo archivo
+    const dniCount = {}
+    parsed.forEach(r => { if (r.dni) dniCount[r.dni] = (dniCount[r.dni] || 0) + 1 })
+
+    const enriched = parsed.map((r, i) => ({
+      ...r,
+      _row: i + 2,
+      _existente: existMap[r.dni] || null,
+      _duplicadoEnArchivo: dniCount[r.dni] > 1,
+      _sinDni: !r.dni,
+      _sinNombre: !r.nombre,
+      _accion: existMap[r.dni] ? 'actualizar' : 'nuevo',
+    }))
+
+    setRows(enriched)
+    setPreview(enriched)
+    setStep('preview')
+  }
+
+  async function importar() {
+    setSaving(true)
+    setError('')
+    let nuevos = 0, actualizados = 0, errores = 0
+
+    for (const r of preview) {
+      if (r._sinDni && r._sinNombre) continue
+      if (r._duplicadoEnArchivo && preview.findIndex(x => x.dni === r.dni) !== preview.indexOf(r)) continue
+
+      const payload = {
+        nombre:      r.nombre || '',
+        apellido:    r.apellido || '',
+        celular:     r.celular || null,
+        cargo:       r.cargo   || null,
+        id_externo:  r.id_externo || null,
+        updated_at:  new Date().toISOString(),
+      }
+
+      if (r._accion === 'actualizar' && r._existente) {
+        const { error: e } = await supabase.from('personal').update(payload).eq('id', r._existente.id)
+        if (e) errores++; else actualizados++
+      } else if (r.dni) {
+        const { error: e } = await supabase.from('personal').upsert({ ...payload, dni: r.dni }, { onConflict: 'dni', ignoreDuplicates: false })
+        if (e) errores++; else nuevos++
+      }
+    }
+
+    setStats({ nuevos, actualizados, errores })
+    setSaving(false)
+    setStep('done')
+  }
+
+  const nuevos      = preview.filter(r => r._accion === 'nuevo' && !r._sinDni && !r._duplicadoEnArchivo)
+  const actualizados = preview.filter(r => r._accion === 'actualizar')
+  const problemas   = preview.filter(r => r._sinDni || r._duplicadoEnArchivo)
+
+  return (
+    <div className="space-y-4">
+      {step === 'upload' && (
+        <div className="space-y-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-700">
+            <p className="font-medium mb-1">Columnas reconocidas automáticamente:</p>
+            <p className="text-xs text-blue-600">Nombre, Apellido, DNI (único — no se duplican), Celular, Cargo, ID Externo (RP)</p>
+            <p className="text-xs text-blue-500 mt-1">Si el DNI ya existe, actualiza los datos. Si no existe, lo crea nuevo.</p>
+          </div>
+          <div className="flex justify-end">
+            <button onClick={downloadTemplate}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
+              <Download size={13}/> Descargar plantilla
+            </button>
+          </div>
+          <label className="block border-2 border-dashed border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 rounded-xl p-10 text-center cursor-pointer transition-colors">
+            <input type="file" accept=".xlsx,.xls,.csv" className="hidden"
+              onChange={e => e.target.files[0] && handleFile(e.target.files[0])} />
+            <Upload size={28} className="mx-auto text-slate-400 mb-2"/>
+            <p className="text-sm font-medium text-slate-600">Subí la nómina en Excel o CSV</p>
+            <p className="text-xs text-slate-400 mt-1">Click o arrastrá el archivo</p>
+          </label>
+        </div>
+      )}
+
+      {step === 'preview' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: 'Nuevos', val: nuevos.length, color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
+              { label: 'Actualizaciones', val: actualizados.length, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200' },
+              { label: 'Con problemas', val: problemas.length, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200' },
+            ].map(s => (
+              <div key={s.label} className={`rounded-xl border p-3 text-center ${s.bg}`}>
+                <p className={`text-2xl font-bold ${s.color}`}>{s.val}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {problemas.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+              <p className="text-xs font-semibold text-amber-700 mb-2">Filas con problemas (se omitirán):</p>
+              {problemas.map((r,i) => (
+                <div key={i} className="flex items-center gap-2 text-xs text-amber-600 py-0.5">
+                  <AlertCircle size={11}/>
+                  <span>Fila {r._row}: {r.nombre} {r.apellido}</span>
+                  <span className="text-amber-400">— {r._sinDni ? 'sin DNI' : 'DNI duplicado en archivo'}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <table className="w-full text-xs">
+              <thead className="bg-slate-50 border-b border-slate-100">
+                <tr>
+                  <th className="text-left px-3 py-2 font-medium text-slate-500">DNI</th>
+                  <th className="text-left px-3 py-2 font-medium text-slate-500">Apellido y Nombre</th>
+                  <th className="text-left px-3 py-2 font-medium text-slate-500 hidden sm:table-cell">Celular</th>
+                  <th className="text-left px-3 py-2 font-medium text-slate-500 hidden sm:table-cell">Cargo</th>
+                  <th className="text-left px-3 py-2 font-medium text-slate-500">Acción</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {preview.slice(0,50).map((r,i) => (
+                  <tr key={i} className={r._duplicadoEnArchivo || r._sinDni ? 'bg-amber-50 opacity-60' : ''}>
+                    <td className="px-3 py-2 font-mono text-slate-500">{r.dni || '—'}</td>
+                    <td className="px-3 py-2 font-medium text-slate-700">{r.apellido} {r.nombre}</td>
+                    <td className="px-3 py-2 text-slate-500 hidden sm:table-cell">{r.celular || '—'}</td>
+                    <td className="px-3 py-2 text-slate-500 hidden sm:table-cell">{r.cargo || '—'}</td>
+                    <td className="px-3 py-2">
+                      <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                        r._sinDni || r._duplicadoEnArchivo ? 'bg-amber-100 text-amber-700' :
+                        r._accion === 'actualizar' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
+                      }`}>
+                        {r._sinDni ? 'sin DNI' : r._duplicadoEnArchivo ? 'duplicado' : r._accion === 'actualizar' ? `actualizar` : 'nuevo'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {preview.length > 50 && <p className="text-xs text-slate-400 text-center py-2">... y {preview.length - 50} más</p>}
+          </div>
+
+          {error && <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg border border-red-200">{error}</div>}
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setStep('upload')} className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg">Volver</button>
+            <button onClick={importar} disabled={saving || (nuevos.length + actualizados.length) === 0}
+              className="flex items-center gap-2 px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-medium rounded-lg">
+              {saving ? <Loader2 size={14} className="animate-spin"/> : <Upload size={14}/>}
+              {saving ? 'Importando...' : `Importar ${nuevos.length + actualizados.length} personas`}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === 'done' && stats && (
+        <div className="bg-white rounded-xl border border-emerald-200 p-8 text-center">
+          <div className="w-14 h-14 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle size={30} className="text-emerald-600"/>
+          </div>
+          <h2 className="text-lg font-bold text-slate-800">¡Importación completada!</h2>
+          <div className="flex justify-center gap-4 mt-3 text-sm text-slate-500">
+            <span><strong className="text-emerald-600">{stats.nuevos}</strong> nuevos</span>
+            <span><strong className="text-blue-600">{stats.actualizados}</strong> actualizados</span>
+            {stats.errores > 0 && <span><strong className="text-red-500">{stats.errores}</strong> errores</span>}
+          </div>
+          <button onClick={() => { setStep('upload'); setPreview([]); setRows([]); setStats(null); setFileName('') }}
+            className="mt-6 px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg">
+            Importar otra nómina
           </button>
         </div>
       )}
