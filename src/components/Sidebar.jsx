@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import {
-  LayoutDashboard, MapPin, Package, ClipboardList,
+  LayoutDashboard, FileSpreadsheet, MapPin, Package, ClipboardList,
   ShoppingCart, Truck, Warehouse, Users, X,
   UserCheck, Building2, Upload, BarChart2, Map, UserCog
 } from 'lucide-react'
