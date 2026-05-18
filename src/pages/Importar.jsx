@@ -469,13 +469,13 @@ function ImportLayout({ step, saving, result, templateBtn, uploadHint, onFile,
         onClick={() => uploadRef.current?.click()}
         onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDragging(true) }}
         onDragEnter={e => { e.preventDefault(); e.stopPropagation(); setDragging(true) }}
-        onDragLeave={e => { e.preventDefault(); setDragging(false) }}
+        onDragLeave={e => { e.preventDefault(); if (!e.currentTarget.contains(e.relatedTarget)) setDragging(false) }}
         onDrop={e => { e.preventDefault(); e.stopPropagation(); setDragging(false); handleDrop(e) }}
       >
-        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${dragging ? 'bg-emerald-100' : 'bg-emerald-50'}`}>
+        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors pointer-events-none ${dragging ? 'bg-emerald-100' : 'bg-emerald-50'}`}>
           <Upload size={26} className="text-emerald-600"/>
         </div>
-        <div className="text-center">
+        <div className="text-center pointer-events-none">
           <div className="text-sm font-medium text-slate-700">
             {dragging ? 'Soltá el archivo acá' : uploadHint}
           </div>
@@ -704,13 +704,14 @@ function ImportarPlanilla() {
         <div className="bg-white rounded-xl border border-slate-200 p-8">
           <div className="flex flex-col items-center gap-4 cursor-pointer group rounded-xl border-2 border-dashed border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 p-8 transition-colors"
             onClick={() => planillaRef.current?.click()}
-            onDragOver={e => { e.preventDefault(); e.stopPropagation() }}
+            onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
+            onDragLeave={e => { e.preventDefault(); }}
             onDrop={e => { e.preventDefault(); e.stopPropagation(); const f = e.dataTransfer.files?.[0]; if (f) handleFile({ target: { files: [f] } }) }}
           >
-            <div className="w-14 h-14 rounded-2xl bg-emerald-50 group-hover:bg-emerald-100 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-50 group-hover:bg-emerald-100 flex items-center justify-center pointer-events-none">
               <Upload size={26} className="text-emerald-600"/>
             </div>
-            <div className="text-center">
+            <div className="text-center pointer-events-none">
               <div className="text-sm font-medium text-slate-700">Seleccioná la planilla Excel de Patri</div>
               <div className="text-xs text-slate-400 mt-1">arrastrá o hacé clic · .xlsx</div>
             </div>
@@ -1015,14 +1016,14 @@ function ImportarPersonal() {
             onClick={() => fileInputRef.current?.click()}
             onDragOver={e => { e.preventDefault(); e.stopPropagation(); setDragging(true) }}
             onDragEnter={e => { e.preventDefault(); e.stopPropagation(); setDragging(true) }}
-            onDragLeave={e => { e.preventDefault(); setDragging(false) }}
+            onDragLeave={e => { e.preventDefault(); if (!e.currentTarget.contains(e.relatedTarget)) setDragging(false) }}
             onDrop={e => { e.preventDefault(); e.stopPropagation(); setDragging(false); const f = e.dataTransfer.files?.[0]; if (f) handleFile(f) }}
           >
             <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
               onChange={e => e.target.files[0] && handleFile(e.target.files[0])} />
-            <Upload size={28} className={`mx-auto mb-2 ${dragging ? 'text-emerald-500' : 'text-slate-400'}`}/>
-            <p className="text-sm font-medium text-slate-600">{dragging ? 'Soltá el archivo acá' : 'Subí la nómina en Excel o CSV'}</p>
-            <p className="text-xs text-slate-400 mt-1">Click o arrastrá el archivo</p>
+            <Upload size={28} className={`mx-auto mb-2 pointer-events-none ${dragging ? 'text-emerald-500' : 'text-slate-400'}`}/>
+            <p className="text-sm font-medium text-slate-600 pointer-events-none">{dragging ? 'Soltá el archivo acá' : 'Subí la nómina en Excel o CSV'}</p>
+            <p className="text-xs text-slate-400 mt-1 pointer-events-none">Click o arrastrá el archivo</p>
           </div>
         </div>
       )}
