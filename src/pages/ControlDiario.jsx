@@ -508,17 +508,90 @@ export default function ControlDiario() {
   // ── REPARTIDOR: tarea completada ──
   if (tarea?.estado === 'cerrado') {
     const diffs = tarea.diferencias_count ?? 0
+    const okCount = lineas.length - diffs
+
+    // Calcular detalle por linea
+    const lineasConDiff = lineas.filter(l => {
+      if (l.cantidad_post_prep == null || l.cantidad_inicial == null) return false
+      const esp = parseFloat(l.cantidad_inicial) - parseFloat(l.cantidad_preparada_sis ?? 0)
+      return Math.abs(parseFloat(l.cantidad_post_prep) - esp) > 0.001
+    })
+
+    const hora = new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
-        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 ${diffs > 0 ? 'bg-red-100' : 'bg-emerald-100'}`}>
-          {diffs > 0 ? <AlertTriangle size={30} className="text-red-500" /> : <CheckCircle2 size={30} className="text-emerald-500" />}
+      <div className="max-w-md mx-auto px-4 py-8">
+        {/* Ícono y título */}
+        <div className="text-center mb-6">
+          <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4 ${diffs > 0 ? 'bg-amber-100' : 'bg-emerald-100'}`}>
+            {diffs > 0 ? <AlertTriangle size={36} className="text-amber-500" /> : <CheckCircle2 size={36} className="text-emerald-500" />}
+          </div>
+          <h2 className="text-xl font-bold text-slate-800">
+            {diffs > 0 ? 'Control completado con diferencias' : '¡Todo en orden! 🎉'}
+          </h2>
+          <p className="text-sm text-slate-400 mt-1">Cerrado a las {hora}</p>
         </div>
-        <h2 className="text-xl font-bold text-slate-800 mb-1">
-          {diffs > 0 ? `${diffs} diferencias encontradas` : 'Control del día completo ✅'}
-        </h2>
-        <p className="text-slate-400 text-sm">
-          {diffs > 0 ? 'El admin fue notificado de las diferencias.' : 'Todo coincide. Buen trabajo.'}
-        </p>
+
+        {/* Resumen */}
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center">
+            <div className="text-2xl font-bold text-emerald-600">{okCount}</div>
+            <div className="text-xs text-emerald-700 mt-0.5">Sin diferencias</div>
+          </div>
+          <div className={`rounded-xl p-4 text-center border ${diffs > 0 ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100'}`}>
+            <div className={`text-2xl font-bold ${diffs > 0 ? 'text-amber-600' : 'text-slate-300'}`}>{diffs}</div>
+            <div className={`text-xs mt-0.5 ${diffs > 0 ? 'text-amber-700' : 'text-slate-400'}`}>Con diferencia</div>
+          </div>
+        </div>
+
+        {/* Detalle de diferencias */}
+        {lineasConDiff.length > 0 && (
+          <div className="bg-white rounded-xl border border-amber-200 overflow-hidden mb-5">
+            <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-100">
+              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">Productos con diferencia</p>
+            </div>
+            {lineasConDiff.map(l => {
+              const esp = parseFloat(l.cantidad_inicial) - parseFloat(l.cantidad_preparada_sis ?? 0)
+              const diff = parseFloat(l.cantidad_post_prep) - esp
+              return (
+                <div key={l.id} className="flex items-center justify-between px-4 py-3 border-b border-slate-50">
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">{l.producto_nombre}</p>
+                    <p className="text-xs text-slate-400">
+                      Esperado: {fmt(esp)} · Contado: {fmt(l.cantidad_post_prep)}
+                    </p>
+                  </div>
+                  <span className={`text-sm font-bold ${diff < 0 ? 'text-red-600' : 'text-amber-600'}`}>
+                    {diff > 0 ? '+' : ''}{fmt(diff)}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Productos ok (colapsado) */}
+        {okCount > 0 && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-5">
+            <p className="text-xs text-emerald-700">
+              <span className="font-semibold">{okCount} productos</span> coincidieron perfectamente con lo esperado ✓
+            </p>
+          </div>
+        )}
+
+        {/* Mensaje de agradecimiento */}
+        <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-center">
+          <p className="text-sm text-slate-600 font-medium">
+            {diffs > 0
+              ? 'Gracias por el control, Lorena 👏'
+              : '¡Excelente trabajo hoy, Lorena! 🌟'}
+          </p>
+          <p className="text-xs text-slate-400 mt-1">
+            {diffs > 0
+              ? 'Tu reporte ayuda a detectar irregularidades. El admin ya fue notificado.'
+              : 'Todo en orden. Tu trabajo hace que el sistema funcione.'}
+          </p>
+        </div>
       </div>
     )
   }
