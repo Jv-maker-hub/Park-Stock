@@ -20,7 +20,7 @@ const DIAS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Doming
 const empty = {
   nombre: '', nombre_oficial: '', nombre_anterior: '',
   direccion: '', lat: null, lng: null,
-  supervisor_id: '', cliente_id: '',
+  supervisor_id: '', cliente_id: '', responsable_id: '',
   estado: 'activo', dias_atencion: [],
   horario_apertura: '', horario_cierre: '',
   contacto_nombre: '', contacto_apellido: '', contacto_dni: '', contacto_tel: '', observaciones: '',
@@ -49,6 +49,66 @@ function useDebounce(value, delay) {
   return dv
 }
 
+
+// ── Buscador de personal ──────────────────────────────────────────────────
+function PersonalPicker({ personal, value, search, onSearch, onChange }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  const selected = value ? personal.find(p => p.id === value) : null
+
+  useEffect(() => {
+    function handle(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [])
+
+  const filtered = search.trim()
+    ? personal.filter(p =>
+        `${p.apellido} ${p.nombre} ${p.dni}`.toLowerCase().includes(search.toLowerCase())
+      ).slice(0, 8)
+    : []
+
+  return (
+    <div className="relative" ref={ref}>
+      {selected && !open ? (
+        <div className="flex items-center justify-between px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white">
+          <span className="text-slate-800 font-medium">{selected.apellido}, {selected.nombre}
+            <span className="ml-2 text-xs text-slate-400 font-normal">DNI {selected.dni}</span>
+          </span>
+          <button type="button" onClick={() => { onChange(null); onSearch('') }}
+            className="text-slate-400 hover:text-red-500 text-xs ml-2">✕</button>
+        </div>
+      ) : (
+        <input
+          type="text"
+          value={search}
+          placeholder="Buscar por apellido, nombre o DNI..."
+          className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          onChange={e => { onSearch(e.target.value); setOpen(true) }}
+          onFocus={() => setOpen(true)}
+        />
+      )}
+      {open && filtered.length > 0 && (
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+          {filtered.map(p => (
+            <button key={p.id} type="button"
+              className="w-full flex items-center justify-between px-4 py-2.5 text-sm hover:bg-emerald-50 transition-colors text-left"
+              onMouseDown={e => { e.preventDefault(); onChange(p.id); setOpen(false) }}>
+              <span className="font-medium text-slate-800">{p.apellido}, {p.nombre}</span>
+              <span className="text-xs text-slate-400 font-mono">{p.dni}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {open && search.trim() && filtered.length === 0 && (
+        <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg px-4 py-3 text-sm text-slate-400">
+          Sin resultados para "{search}"
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Lugares() {
   const [rows, setRows]             = useState([])
   const [filtered, setFiltered]     = useState([])
@@ -58,6 +118,8 @@ export default function Lugares() {
   const [loading, setLoading]       = useState(true)
   const [supervisores, setSupervisores] = useState([])
   const [clientes, setClientes]     = useState([])
+  const [personal, setPersonal]     = useState([])
+  const [persSearch, setPersSearch] = useState('')
   const [modalOpen, setModalOpen]   = useState(false)
   const [form, setForm]             = useState(empty)
   const [saving, setSaving]         = useState(false)
@@ -197,14 +259,16 @@ export default function Lugares() {
 
   async function fetchAll() {
     setLoading(true)
-    const [lugaresRes, supRes, cliRes] = await Promise.all([
+    const [lugaresRes, supRes, cliRes, persRes] = await Promise.all([
       supabase.from('lugares').select('*').order('nombre'),
       supabase.from('supervisores').select('id, nombre').eq('activo', true).order('nombre'),
       supabase.from('clientes').select('id, nombre').eq('activo', true).order('nombre'),
+      supabase.from('personal').select('id, nombre, apellido, dni').eq('estado', 'activo').order('apellido'),
     ])
     setRows(lugaresRes.data ?? [])
     setSupervisores(supRes.data ?? [])
     setClientes(cliRes.data ?? [])
+    setPersonal(persRes.data ?? [])
     setLoading(false)
   }
 
@@ -218,6 +282,7 @@ export default function Lugares() {
       nombre_anterior:   row.nombre_anterior   ?? '',
       supervisor_id:     row.supervisor_id      ?? '',
       cliente_id:        row.cliente_id         ?? '',
+      responsable_id:    row.responsable_id     ?? '',
       lat:               row.lat               ?? null,
       lng:               row.lng               ?? null,
       horario_apertura:  row.horario_apertura   ?? '',
@@ -292,8 +357,9 @@ export default function Lugares() {
       direccion:         dirQuery?.trim()               || null,
       lat:               form.lat  ?? null,
       lng:               form.lng  ?? null,
-      supervisor_id:     form.supervisor_id ? parseInt(form.supervisor_id) : null,
-      cliente_id:        form.cliente_id    ? parseInt(form.cliente_id)    : null,
+      supervisor_id:     form.supervisor_id  ? parseInt(form.supervisor_id)  : null,
+      cliente_id:        form.cliente_id     ? parseInt(form.cliente_id)     : null,
+      responsable_id:    form.responsable_id ? parseInt(form.responsable_id) : null,
       estado:            form.estado,
       dias_atencion:     form.dias_atencion,
       horario_apertura:  form.horario_apertura || null,
@@ -564,6 +630,16 @@ export default function Lugares() {
                 <option value="">Sin cliente</option>
                 {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </select>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-slate-600 mb-1">Responsable operativo</label>
+              <PersonalPicker
+                personal={personal}
+                value={form.responsable_id ? parseInt(form.responsable_id) : null}
+                search={persSearch}
+                onSearch={setPersSearch}
+                onChange={id => { setForm(f => ({ ...f, responsable_id: id ?? '' })); setPersSearch('') }}
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Estado</label>
