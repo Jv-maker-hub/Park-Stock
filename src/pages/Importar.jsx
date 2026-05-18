@@ -978,7 +978,10 @@ function ImportarPersonal() {
         const { error: e } = await supabase.from('personal').update(payload).eq('id', r._existente.id)
         if (e) errores++; else actualizados++
       } else if (r.dni) {
-        const { error: e } = await supabase.from('personal').upsert({ ...payload, dni: r.dni }, { onConflict: 'dni', ignoreDuplicates: false })
+        const { error: e } = await supabase.from('personal').upsert(
+          { ...payload, dni: r.dni, estado: 'activo' },
+          { onConflict: 'dni', ignoreDuplicates: false }
+        )
         if (e) errores++; else nuevos++
       }
     }
