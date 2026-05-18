@@ -23,7 +23,7 @@ const empty = {
   supervisor_id: '', cliente_id: '', responsable_id: '',
   estado: 'activo', dias_atencion: [],
   horario_apertura: '', horario_cierre: '',
-  contacto_nombre: '', contacto_apellido: '', contacto_dni: '', contacto_tel: '', observaciones: '',
+  observaciones: '',
   dia_reparto: '',
   // Características
   metros_cuadrados: '', cantidad_empleados: '', cantidad_banos: '',
@@ -316,13 +316,11 @@ export default function Lugares() {
 
   function exportarLugares() {
     const COLS = ['id_numerico','nombre','nombre_anterior','direccion','estado',
-      'contacto_nombre','contacto_apellido','contacto_dni','contacto_tel',
       'metros_cuadrados','cantidad_empleados','cantidad_banos','cantidad_pisos',
       'acceso_publico','tiene_cocina','frecuencia_limpieza','personal_limpieza',
       'dia_reparto','observaciones']
     const FRIENDLY = ['ID (no cambiar)','Nombre Park Service ⭐','Nombre Entrega (Patri)','Dirección',
       'Estado',
-      'Contacto Nombre','Contacto Apellido','Contacto DNI','Contacto Tel',
       'm²','Empleados','Baños','Pisos',
       'Acceso Público (SI/NO)','Tiene Cocina (SI/NO)',
       'Frec. Limpieza (días)','Personal Limpieza','Día de Reparto','Observaciones']
@@ -364,10 +362,6 @@ export default function Lugares() {
       dias_atencion:     form.dias_atencion,
       horario_apertura:  form.horario_apertura || null,
       horario_cierre:    form.horario_cierre   || null,
-      contacto_nombre:   form.contacto_nombre?.trim()   || null,
-      contacto_apellido: form.contacto_apellido?.trim()  || null,
-      contacto_dni:      form.contacto_dni?.trim()       || null,
-      contacto_tel:      form.contacto_tel?.trim()      || null,
       observaciones:     form.observaciones?.trim()     || null,
       dia_reparto:       form.dia_reparto               || null,
       metros_cuadrados:  num(form.metros_cuadrados),
@@ -476,7 +470,7 @@ export default function Lugares() {
                     onClick={() => toggleSort('nombre')}>
                     Nombre<SortIcon field="nombre"/>
                   </th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide hidden md:table-cell">Contacto</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide hidden md:table-cell">Responsable</th>
                   <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wide">Estado</th>
                   <th className="px-4 py-3 w-6"></th>
                 </tr>
@@ -484,7 +478,6 @@ export default function Lugares() {
               <tbody className="divide-y divide-slate-50">
                 {filtered.map(row => {
                   const url = mapsUrl(row)
-                  const wa  = waLink(row.contacto_tel)
                   return (
                     <tr key={row.id} onClick={() => openEdit(row)}
                       className="hover:bg-slate-50 transition-colors cursor-pointer">
@@ -518,20 +511,7 @@ export default function Lugares() {
                         )}
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
-                        {row.contacto_nombre && <div className="text-sm text-slate-700">{row.contacto_nombre}</div>}
-                        {row.contacto_tel && (
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-xs text-slate-400">{row.contacto_tel}</span>
-                            {wa && (
-                              <a href={wa} target="_blank" rel="noreferrer"
-                                onClick={e => e.stopPropagation()}
-                                className="flex items-center gap-0.5 text-xs text-emerald-600 hover:text-emerald-800">
-                                <MessageCircle size={11} /> WA
-                              </a>
-                            )}
-                          </div>
-                        )}
-                        {!row.contacto_nombre && !row.contacto_tel && <span className="text-slate-300 text-xs">—</span>}
+                        {(() => { const p = personal.find(x => x.id === row.responsable_id); return p ? <span className="text-sm text-slate-700">{p.apellido}, {p.nombre}</span> : <span className="text-slate-300 text-xs">—</span> })()}
                       </td>
                       <td className="px-4 py-3">
                         <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${ESTADO_COLORS[row.estado]}`}>
@@ -684,34 +664,10 @@ export default function Lugares() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Contacto nombre</label>
-              <input value={form.contacto_nombre ?? ''} onChange={e => setForm(f => ({ ...f, contacto_nombre: e.target.value }))} className={inp} />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Contacto apellido</label>
-              <input value={form.contacto_apellido ?? ''} onChange={e => setForm(f => ({ ...f, contacto_apellido: e.target.value }))} className={inp} />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Contacto DNI</label>
-              <input value={form.contacto_dni ?? ''} onChange={e => setForm(f => ({ ...f, contacto_dni: e.target.value }))} className={inp} />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Contacto teléfono</label>
-              <input value={form.contacto_tel ?? ''} onChange={e => setForm(f => ({ ...f, contacto_tel: e.target.value }))} className={inp} />
-              {form.contacto_tel && waLink(form.contacto_tel) && (
-                <a href={waLink(form.contacto_tel)} target="_blank" rel="noreferrer"
-                  className="inline-flex items-center gap-1 mt-1 text-xs text-emerald-600 hover:text-emerald-800">
-                  <MessageCircle size={11} /> Abrir WhatsApp
-                </a>
-              )}
-            </div>
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-slate-600 mb-1">Observaciones</label>
-              <textarea value={form.observaciones ?? ''} onChange={e => setForm(f => ({ ...f, observaciones: e.target.value }))}
-                rows={2} className={inp + ' resize-none'} />
-            </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Observaciones</label>
+            <textarea value={form.observaciones ?? ''} onChange={e => setForm(f => ({ ...f, observaciones: e.target.value }))}
+              rows={2} className={inp + ' resize-none'} />
           </div>
 
           {/* ── Características del lugar (colapsable) ── */}
