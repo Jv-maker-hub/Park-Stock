@@ -2,30 +2,33 @@ import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, FileSpreadsheet, MapPin, Package, ClipboardList,
   ShoppingCart, Truck, Warehouse, Users, X,
-  UserCheck, Building2, Upload, BarChart2, Map, UserCog, ClipboardCheck
+  UserCheck, Building2, Upload, BarChart2, Map, UserCog, ClipboardCheck,
+  PackageCheck
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 const NAV = [
-  { path: '/',          icon: LayoutDashboard, label: 'Dashboard',    roles: ['admin','compras','preparador','repartidor','recepcion'] },
-  { path: '/lugares',   icon: MapPin,          label: 'Lugares',      roles: ['admin','supervisor'] },
-  { path: '/productos', icon: Package,         label: 'Productos',    roles: ['admin'] },
+  { path: '/',              icon: LayoutDashboard, label: 'Dashboard',       roles: ['admin','compras','preparador','repartidor','recepcion'] },
+  { path: '/lugares',       icon: MapPin,          label: 'Lugares',         roles: ['admin','supervisor'] },
+  { path: '/productos',     icon: Package,         label: 'Productos',       roles: ['admin'] },
   { path: '/importar-modelo', icon: FileSpreadsheet, label: 'Pedido Modelo', roles: ['admin','compras'] },
-  { path: '/importar',  icon: Upload,          label: 'Importar',     roles: ['admin'] },
-  { path: '/analisis',  icon: BarChart2,       label: 'Análisis',     roles: ['admin','compras'] },
-  { path: '/mapa',      icon: Map,             label: 'Mapa',         roles: ['admin','repartidor'] },
-  { path: '/pedidos',   icon: ShoppingCart,    label: 'Pedidos',      roles: ['admin','preparador'] },
-  { path: '/rutas',     icon: Truck,           label: 'Rutas',        roles: ['admin','repartidor'] },
-  { path: '/stock',     icon: Warehouse,       label: 'Stock',        roles: ['admin','compras'] },
-  { path: '/auditor',   icon: ClipboardCheck,  label: 'Auditor',      roles: ['admin','auditor','compras'] },
-  { path: '/control-diario', icon: ClipboardList,  label: 'Control diario', roles: ['admin','auditor','compras','repartidor'] },
+  { path: '/importar',      icon: Upload,          label: 'Importar',        roles: ['admin'] },
+  { path: '/analisis',      icon: BarChart2,       label: 'Análisis',        roles: ['admin','compras'] },
+  { path: '/mapa',          icon: Map,             label: 'Mapa',            roles: ['admin','repartidor'] },
+  { path: '/pedidos',       icon: ShoppingCart,    label: 'Pedidos',         roles: ['admin','preparador'] },
+  { path: '/rutas',         icon: Truck,           label: 'Rutas',           roles: ['admin','repartidor'] },
+  { path: '/stock',         icon: Warehouse,       label: 'Stock',           roles: ['admin','compras'] },
+  { path: '/compras',       icon: ShoppingCart,    label: 'Compras',         roles: ['admin','compras'] },
+  { path: '/recepcion',     icon: PackageCheck,    label: 'Recepción',       roles: ['admin','compras','recepcion'] },
+  { path: '/auditor',       icon: ClipboardCheck,  label: 'Auditor',         roles: ['admin','auditor','compras'] },
+  { path: '/control-diario', icon: ClipboardList,  label: 'Control diario',  roles: ['admin','auditor','compras','repartidor'] },
 ]
 
 const NAV_CONFIG = [
-  { path: '/personal',    icon: UserCog,  label: 'Personal',     roles: ['admin'] },
-  { path: '/usuarios',    icon: Users,    label: 'Usuarios',     roles: ['admin'] },
-  { path: '/supervisores',icon: UserCheck,label: 'Supervisores', roles: ['admin'] },
-  { path: '/clientes',    icon: Building2,label: 'Clientes',     roles: ['admin'] },
+  { path: '/personal',     icon: UserCog,   label: 'Personal',     roles: ['admin'] },
+  { path: '/usuarios',     icon: Users,     label: 'Usuarios',     roles: ['admin'] },
+  { path: '/supervisores', icon: UserCheck, label: 'Supervisores', roles: ['admin'] },
+  { path: '/clientes',     icon: Building2, label: 'Clientes',     roles: ['admin'] },
 ]
 
 export default function Sidebar({ open, onClose }) {

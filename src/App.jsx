@@ -20,6 +20,8 @@ import ImportarModelo from './pages/ImportarModelo'
 import Proximamente from './pages/Proximamente'
 import Auditor from './pages/Auditor'
 import ControlDiario from './pages/ControlDiario'
+import Compras from './pages/Compras'
+import Recepcion from './pages/Recepcion'
 
 function Spinner() {
   return (
@@ -94,6 +96,8 @@ function AppRoutes() {
         <Route path="stock"       element={<Guard roles={['admin','compras']}><Proximamente titulo="Stock" /></Guard>} />
         <Route path="auditor"     element={<Guard roles={['admin','auditor','compras']}><Auditor /></Guard>} />
         <Route path="control-diario" element={<Guard roles={['admin','auditor','compras','repartidor']}><ControlDiario /></Guard>} />
+        <Route path="compras"     element={<Guard roles={['admin','compras']}><Compras /></Guard>} />
+        <Route path="recepcion"   element={<Guard roles={['admin','compras','recepcion']}><Recepcion /></Guard>} />
         <Route path="perfil"     element={<Guard><Perfil /></Guard>} />
         <Route path="importar-modelo" element={<Guard roles={['admin','compras']}><ImportarModelo /></Guard>} />
       </Route>
